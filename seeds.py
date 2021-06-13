@@ -2,41 +2,42 @@ import numpy as np
 
 
 def seed2string(seedval: int):
-	aAbcdefghjklmnp = "ABCDEFGHJKLMNPQRSTWXYZ01234V6789"
-	seed_checksum = 0
-	tmp_seedval = 0
-	v10 = []
-	seed_string = ""
-	
-	if seedval:
-		tmp_seedval = seedval
-		while True:
-			v4 = np.uint8(tmp_seedval + seed_checksum)
-			tmp_seedval >>= 5
-			seed_checksum = np.uint8((v4 >> 7) + 2 * v4)
-			if not tmp_seedval:
-				break
-	
-	v6 = seedval ^ 0xFEF7FFD
-	v10.append(np.uint32(v6 >> 27))
-	v10.append(np.uint32((v6 >> 22) & 0x1F))
-	v10.append(np.uint32((v6 >> 17) & 0x1F))
-	v10.append(np.uint32((v6 >> 12) & 0x1F))
-	v10.append(np.uint32((v6 >> 7) & 0x1F))
-	v10.append(np.uint32((v6 >> 2) & 0x1F))
-	v10.append(np.uint32(((seed_checksum | (v6 << 8)) >> 5) & 0x1F))
-	v10.append(np.uint32(seed_checksum & 0x1F))
-	
-	for v7 in range(0, 9):
-		if v7 != 4:
-			offset = 0
-			if v7 > 4:
-				offset = -1
-			seed_string += aAbcdefghjklmnp[v10[v7 + offset]]
-		else:
-			seed_string += " "
-	
-	return seed_string
+    aAbcdefghjklmnp = "ABCDEFGHJKLMNPQRSTWXYZ01234V6789"
+    seed_checksum = 0
+    tmp_seedval = 0
+    v10 = []
+    seed_string = ""
+
+    if seedval:
+        tmp_seedval = seedval
+        while True:
+            v4 = np.uint8((tmp_seedval + seed_checksum)& 0xff)
+            tmp_seedval >>= 5
+            seed_checksum = np.uint8((v4 >> 7) + 2 * v4)
+            if not tmp_seedval:
+                break
+
+    v6 = seedval ^ 0xFEF7FFD
+    v10.append(np.uint32(v6 >> 27))
+    v10.append(np.uint32((v6 >> 22) & 0x1F))
+    v10.append(np.uint32((v6 >> 17) & 0x1F))
+    v10.append(np.uint32((v6 >> 12) & 0x1F))
+    v10.append(np.uint32((v6 >> 7) & 0x1F))
+    v10.append(np.uint32((v6 >> 2) & 0x1F))
+    v10.append(np.uint32(((seed_checksum | (v6 << 8)) >> 5) & 0x1F))
+    v10.append(np.uint32(seed_checksum & 0x1F))
+
+    for v7 in range(0, 9):
+        if v7 != 4:
+            offset = 0
+            if v7 > 4:
+                offset = -1
+            seed_string += aAbcdefghjklmnp[v10[v7 + offset]]
+        else:
+            seed_string += " "
+
+    return seed_string
+
 
 #
 # unsigned int Seeds::String2Seed(string a1)

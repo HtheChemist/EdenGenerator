@@ -4,7 +4,7 @@ import numpy as np
 
 
 class RNG:
-    shift: List[int]
+    shift: List[int] = [0,0,0]
     seed: int
     old_seed: int
     verbose: int
@@ -51,6 +51,27 @@ class RNG:
             print(verbose_str)
 
         return self.seed
+    
+    def previous(self):
+        self.old_seed = self.seed
+        self.reverse_xor_rshift(self.shift[2])
+        self.reverse_xor_lshift(self.shift[1])
+        self.reverse_xor_rshift(self.shift[0])
+        self.seed = np.uint32(self.seed)
+
+        verbose_str: str = ""
+        if self.verbose > 0:
+            verbose_str += self.__class__.__name__ + " Previous"
+        if self.verbose > 1:
+            verbose_str += " " + str(hex(self.old_seed)) + " -> " + str(hex(self.seed))
+        if self.verbose > 3:
+            verbose_str += " (" + str(self.seed) + ")"
+        if self.verbose > 2:
+            verbose_str += " " + str(self.shift)
+        if verbose_str:
+            print(verbose_str)
+        
+        return self.seed
 
     def gen_random_array(self, amount_of_number: int):
         self.random_numbers = [self.seed]
@@ -88,6 +109,23 @@ class RNG:
             if verbose_str:
                 print(verbose_str)
 
+    def revese_random(self, maximum: int = 1):
+        random_number: Union[int, float] = 0
+        if maximum == 1:
+            random_number = self.previous() * 2.3283062e-10
+        else:
+            random_number = self.previous() % maximum
+
+        verbose_str: str = ""
+        if self.verbose > 1:
+            verbose_str += "Generated previous random number: " + str(random_number)
+        if self.verbose > 2:
+            verbose_str += " (Max: " + str(maximum) + ")"
+        if verbose_str:
+            print(verbose_str)
+
+        return random_number
+
     def random(self, maximum: int = 1):
         random_number: Union[int, float] = 0
         if maximum == 1:
@@ -114,6 +152,25 @@ class RNG:
             + ") "
             + str(self.shift)
         )
+
+    def reverse_xor_lshift(self, shift):
+        i = shift
+        while i < 32:
+            self.seed ^= np.uint32((self.seed << i) & 0xffffffff)
+            i *= 2
+        self.seed = np.uint32(self.seed)
+        #return np.uint32(self.seed)
+    
+    def reverse_seed(self, w=32):
+        self.seed = int(bin(self.seed)[2:].rjust(w, '0')[::-1], 2)
+
+    def reverse_xor_rshift(self, shift):
+        self.reverse_seed()
+        self.reverse_xor_lshift(shift)
+        self.reverse_seed()
+        return self.seed
+        
+        #return self.reverse_bin(self.reverse_xor_lshift(self.reverse_bin(), shift))
 
 
 class GameSeeds(RNG):
@@ -152,6 +209,7 @@ class TrinketsSeeds(RNG):
     """
     This RNG is used to generate the Trinkets starting seeds (not the same as the Trinket Pickup Seeds)
     """
+
     shift = [0x1, 0x15, 0x14]
 
 
@@ -191,6 +249,7 @@ class DropSeeds(RNG):
     """
     This RNG is used to calculate most of Eden Drop
     """
+
     shift = [0x1, 0x5, 0x13]
 
 
@@ -206,11 +265,13 @@ class PickupSeeds1(RNG):
     """
     This RNG is used to generate the Pickup and Drop?
     """
+
     shift = [0x1, 0x9, 0x1D]
-    
+
 
 class PillsDrop(RNG):
-	"""
-	This RNG is used to generate the Drop for pills
-	"""
-	shift = [0x2, 0x7, 0x9]
+    """
+    This RNG is used to generate the Drop for pills
+    """
+
+    shift = [0x2, 0x7, 0x9]

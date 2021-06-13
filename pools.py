@@ -2,9 +2,10 @@ from enum import Enum
 
 
 class ItemType(Enum):
-    Passive = 1
-    Active = 2
+    Active = 1
+    Passive = 2
     Familiar = 3
+    Forbidden = -1
 
 
 isaac_items = {
