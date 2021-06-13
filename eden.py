@@ -84,8 +84,8 @@ class Eden:
 
     def set_held_item(self):
         if self.drop_rng.random(3):
-            if self.drop_rng.next() & 1 == 0:
-                if self.drop_rng.next() & 1 == 0:
+            if not self.drop_rng.next() & 1:
+                if not self.drop_rng.next() & 1:
                     # Get Card or Rune
                     self.cards_rng = CardsDrop(self.drop_rng.next(), self.verbose)
                     if self.cards_rng.random(0x19):
