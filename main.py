@@ -1,12 +1,14 @@
 from typing import List
 
 from game import Game
-from rng import GameSeeds, DropSeeds, ItemsSeeds, PillsSeeds, CardsSeeds, PickupSeeds1, PickupSeeds2, CardsDrop, \
+from rng import GameSeeds, DropSeeds, ItemsSeeds, PickupSeeds1, PickupSeeds2, CardsDrop, \
     PillsDrop
 from seeds import seed2string
 from pools import ItemType, isaac_items, items_blacklist
 from threading import Thread
 from queue import Queue
+
+from timer import timer
 
 verbose_level = 0
 num_worker_threads = 10
@@ -40,11 +42,11 @@ def bruteforce(start: int = 0):
 
 
 class Reverser:
-    collectibles_number = 0x2DA
 
     def __init__(self, active: int = None, passive: int = None, card: int = None, trinket: int = None,
                  pill_effect: int = None, start_seed: int = 0, end_seed: int = 0xFFFFFFFF, seeds: List = None,
                  ref_queue: Queue = None):
+        self.collectibles_number: int = 0x2DA
         self.potential_dropseed = None
         self.potential_holdseed = None
         self.potential_trinketseed = None
@@ -113,6 +115,7 @@ class Reverser:
             return ItemType.Active
         else:
             return ItemType.Passive
+
 
     def reverse(self):
         while self.start_seed < min(0xFFFFFFFF, self.end_seed):
@@ -325,7 +328,6 @@ class Reverser:
         # print("Range delta: " + str(self.range_delta))
         # print("Speed delta: " + str(self.speed_delta))
         # print("Luck delta: " + str(self.luck_delta))
-
 
 if __name__ == "__main__":
     # reverser = Reverser(active=325, passive=389, start_seed=0xf7a82728)
