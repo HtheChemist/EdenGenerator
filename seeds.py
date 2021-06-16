@@ -11,7 +11,7 @@ def seed2string(seedval: int):
     if seedval:
         tmp_seedval = seedval
         while True:
-            v4 = np.uint8((tmp_seedval + seed_checksum)& 0xff)
+            v4 = np.uint8((tmp_seedval + seed_checksum) & 0xFF)
             tmp_seedval >>= 5
             seed_checksum = np.uint8((v4 >> 7) + 2 * v4)
             if not tmp_seedval:
