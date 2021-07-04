@@ -61,7 +61,7 @@ def reverse_seed(seed: numba.uint32):
 
 
 @numba.njit
-def reverser(
+def jit_reverser(
     active: int = 0,
     passive: int = 0,
     card: int = 0,
@@ -270,7 +270,6 @@ def get_trinket(seed, trinket_id, trinket_number):
 
 @numba.njit
 def get_card(seed, card_id, card_number):
-    seed = previous_xorshift(seed, 0x1, 0x5, 0x13)
     seed = next_xorshift(seed, 0x3, 0x3, 0x1D)
     if seed % 0x19:
         seed = next_xorshift(seed, 0x3, 0x3, 0x1D)
@@ -280,7 +279,6 @@ def get_card(seed, card_id, card_number):
             tmp_card += 55
     else:
         tmp_card = -1
-    print(tmp_card)
     if card_id == tmp_card or card_id == -1:
         return True
     else:
@@ -291,5 +289,5 @@ def get_pill(seed, pill_effect_id):
     return True
 
 if __name__ == "__main__":
-    aa = reverser(active=352, passive=432, card=73, start_seed=0x9555ea3, end_seed=0x9990000)
+    aa = jit_reverser(active=352, passive=116, trinket=3, start_seed=0x9555ea3, end_seed=0xFFFFFFFF)
     print(aa)

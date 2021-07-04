@@ -3,8 +3,9 @@ from rng import StatsSeeds, DropSeeds, CardsDrop, PillsDrop
 
 
 class Eden:
-    def __init__(self, eden_seed, pickup_rng, verbose):
+    def __init__(self, eden_seed, pickup_rng, pills_array, verbose):
         self.verbose = verbose
+        self.pills_array = pills_array
 
         self.red_hearts = 0
         self.soul_hearts = 0
@@ -25,6 +26,7 @@ class Eden:
         self.passive = None
         self.trinket = None
         self.card = None
+        self.pill = None
 
         self.eden_seed = eden_seed
         self.stats_rng = StatsSeeds(eden_seed, verbose)
@@ -40,12 +42,13 @@ class Eden:
         self.set_collectibles()
 
     def print_stats(self):
-        print("--- Eden ---")
+        # print("--- Eden ---")
         print("Red Hearts: " + str(self.red_hearts))
         print("Soul Hearts: " + str(self.soul_hearts))
         print("")
         print("Trinket: " + str(self.trinket))
-        print("Card/Soul/Pill: " + str(self.card))
+        print("Card/Soul: " + str(self.card))
+        print("Pill: " + str(self.pill) + ' - Effect: ' + str(self.pills_array[self.pill]))
         print("Active: " + str(self.active))
         print("Passive: " + str(self.passive))
         print("")
@@ -55,6 +58,7 @@ class Eden:
         print("Range delta: " + str(self.range_delta))
         print("Speed delta: " + str(self.speed_delta))
         print("Luck delta: " + str(self.luck_delta))
+
 
     def set_hearts(self):
         self.red_hearts = self.stats_rng.next() & 3
@@ -98,11 +102,11 @@ class Eden:
                 else:
                     # Get Pill
                     self.pills_rng = PillsDrop(self.drop_rng.next(), self.verbose)
-                    pill_id = self.pills_rng.random(0xD)
+                    self.pill = self.pills_rng.random(0xD)
                     if not self.pills_rng.random(0x8C):  # Check for Gold Pill
-                        pill_id = 14
+                        self.pill = 14
                     if not self.pills_rng.random(0x46):  # Check for Horse Pill
-                        pill_id |= 0x800
+                        self.pill |= 0x800
         else:
             self.trinket = self.pickup_rng.random(0xBE)
 
