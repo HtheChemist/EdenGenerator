@@ -1,12 +1,14 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 from typing import List
 
 from game import Game
-from rng import GameSeeds, DropSeeds, ItemsSeeds, PillsSeeds, CardsSeeds, PickupSeeds1, PickupSeeds2, CardsDrop, \
+from rng import GameSeeds, DropSeeds, ItemsSeeds, PickupSeeds1, PickupSeeds2, CardsDrop, \
     PillsDrop
 from seeds import seed2string
 from pools import ItemType, isaac_items, items_blacklist
-from threading import Thread
 from queue import Queue
+from jitfunctions import jit_reverser
 
 verbose_level = 0
 num_worker_threads = 10
@@ -40,11 +42,11 @@ def bruteforce(start: int = 0):
 
 
 class Reverser:
-    collectibles_number = 0x2DA
 
     def __init__(self, active: int = None, passive: int = None, card: int = None, trinket: int = None,
                  pill_effect: int = None, start_seed: int = 0, end_seed: int = 0xFFFFFFFF, seeds: List = None,
                  ref_queue: Queue = None):
+        self.collectibles_number: int = 0x2DA
         self.potential_dropseed = None
         self.potential_holdseed = None
         self.potential_trinketseed = None
@@ -64,7 +66,7 @@ class Reverser:
         self.hold_seed = None
         self.trinket_seed = None
         self.nothing_seed = None
-        self.found_seed = seeds if not None else []
+        self.found_seed = seeds if seeds is not None else []
         self.queue = ref_queue
 
     @property
@@ -114,7 +116,9 @@ class Reverser:
         else:
             return ItemType.Passive
 
+
     def reverse(self):
+        print(self.start_seed)
         while self.start_seed < min(0xFFFFFFFF, self.end_seed):
             # print('Trying seed: ' + str(hex(self.start_seed)))
             item_id = self.start_seed % self.collectibles_number + 1
@@ -127,9 +131,9 @@ class Reverser:
                     self.passive_found = True
 
                 # print('First item found: ' + str(item_id) + ' (' + str(first_item_type) + ')')
-                self.potential_dropseed = DropSeeds(self.start_seed)
+                self.potential_dropseed = DropSeeds(self.start_seed,4)
                 for i in range(0, 99):
-                    item_id = self.potential_dropseed.revese_random(self.collectibles_number) + 1
+                    item_id = self.potential_dropseed.reverse_random(self.collectibles_number) + 1
                     if item_id not in items_blacklist:
                         if self.check_item_type(item_id) == first_item_type:
                             # print('Another ' + str(first_item_type) + ' was found before the second one. Break.')
@@ -156,7 +160,7 @@ class Reverser:
                         # print('Trinket possible')
                         self.potential_trinketseed = DropSeeds(check_point_1)
                         if self.get_trinket():
-                            self.trinket_seed = self.goto_start_seed('trinket', check_point_2)
+                            self.trinket_seed = self.goto_start_seed(check_point_2)
                             self.print_stats(self.trinket_seed)
                             self.found_seed.append(self.trinket_seed)
                             # break
@@ -173,9 +177,8 @@ class Reverser:
                             # print('Pill possible')
                             if self.pill_effect is not None:
                                 self.potential_holdseed = PillsDrop(check_point_1)
-                                self.hold_type = 'pill'
                                 if self.get_pill():
-                                    self.hold_seed = self.goto_start_seed('card', check_point_5)
+                                    self.hold_seed = self.goto_start_seed(check_point_5)
                                     self.print_stats(self.hold_seed)
                                     self.found_seed.append(self.hold_seed)
                                     # break
@@ -189,9 +192,8 @@ class Reverser:
                             # print('Card possible')
                             if self.card is not None:
                                 self.potential_holdseed = CardsDrop(check_point_1)
-                                self.hold_type = 'card'
                                 if self.get_card():
-                                    self.hold_seed = self.goto_start_seed('card', check_point_5)
+                                    self.hold_seed = self.goto_start_seed(check_point_5)
                                     self.print_stats(self.hold_seed)
                                     self.found_seed.append(self.hold_seed)
                                     # break
@@ -206,7 +208,7 @@ class Reverser:
                     if check_point_1 & 1 and check_point_2 % 3:
                         # print('Theoretically nothing')
                         if self.card is None and self.pill_effect is None and self.trinket is None:
-                            self.nothing_seed = self.goto_start_seed('nothing', check_point_3)
+                            self.nothing_seed = self.goto_start_seed(check_point_3)
                             self.print_stats(self.nothing_seed)
                             self.found_seed.append(self.nothing_seed)
                             # break
@@ -214,8 +216,6 @@ class Reverser:
                             # print('This try will yield a pill, card or trinket. Next')
                             pass
 
-            # print('The items are not found according to the asked requirement. Resetting.')
-            # break
             self.passive_found = False
             self.active_found = False
             self.potential_dropseed = None
@@ -236,7 +236,7 @@ class Reverser:
         else:
             return self.collectibles_number - modulo + self.min_item - 1
 
-    def goto_start_seed(self, type, seed):
+    def goto_start_seed(self, seed):
         items_seeds = ItemsSeeds(seed)
         items_seeds.previous()
         items_seeds.previous()
@@ -282,103 +282,66 @@ class Reverser:
     def get_pill(self):
         return True
 
-    # def generate_different_option(self):
-    #     # To trinket
-    #     if self.trinket is not None and self.card is None and self.pill_effect is None:
-    #         with_trinket_seed = DropSeeds(self.potential_dropseed.seed)
-    #         start_seed = self.from_eden_seed_to_start_seed(with_trinket_seed.previous())
-    #         print('With trinket: ' + str(start_seed) + ' (' + seed2string(start_seed) + ')')
-    #
-    #     with_hold_seed = DropSeeds(self.potential_dropseed.seed)
-    #     hold_seed_value = with_hold_seed.previous().seed
-    #     if with_hold_seed.previous() & 1:
-    #         self.potential_holdseed = PillsSeeds(hold_seed_value)
-    #     else:
-    #         self.potential_holdseed = CardsSeeds(hold_seed_value)
-    #     hold_seed_value.previous()
-    #     start_seed = self.from_eden_seed_to_start_seed(hold_seed_value.previous())
-    #     print('With card: ' + str(start_seed) + ' (' + seed2string(start_seed) + ')')
-    #
-    #     # Bug here
-    #     if self.trinket is None and self.card is None and self.pill_effect is None:
-    #         with_nothing_seed = DropSeeds(self.potential_dropseed.seed,2)
-    #         with_nothing_seed.previous()
-    #         start_seed = self.from_eden_seed_to_start_seed(with_nothing_seed.previous())
-    #         print('With nothing: ' + str(start_seed) + ' (' + seed2string(start_seed) + ')')
-
     def print_stats(self, seed):
         print("--- Seed ---")
         print(seed2string(seed) + " (" + str(seed) + ")")
         print("--- Eden ---")
-        # print("Red Hearts: " + str(self.red_hearts))
-        # print("Soul Hearts: " + str(self.soul_hearts))
-        # print("")
         print("Trinket: " + str(self.trinket))
         print("Card/Soul: " + str(self.card))
         print("Pill: " + str(self.pill_effect))
         print("Active: " + str(self.active))
         print("Passive: " + str(self.passive))
-        # print("")
-        # print("Damage delta: " + str(self.damage_delta))
-        # print("Speed delta: " + str(self.speed_delta))
-        # print("Tear delta: " + str(self.tear_delta))
-        # print("Range delta: " + str(self.range_delta))
-        # print("Speed delta: " + str(self.speed_delta))
-        # print("Luck delta: " + str(self.luck_delta))
 
+
+def print_progress_bar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
+    """
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filled_length = int(length * iteration // total)
+    bar = fill * filled_length + '-' * (length - filled_length)
+    print(f'\r{prefix} |{bar}| {percent}% {suffix}', end = printEnd)
+    # Print New Line on Complete
+    if iteration == total:
+        print()
 
 if __name__ == "__main__":
-    # reverser = Reverser(active=325, passive=389, start_seed=0xf7a82728)
+    game = Game(1000,3)
 
-    if num_worker_threads > 0:
-        queue = Queue()
-        chunk_size = int(0xFFFFFFFF / num_worker_threads) + 1
-        for i in range(0, num_worker_threads):
-            start = chunk_size * i + 1
-            end = chunk_size * (i + 1)
-            instance[i] = Reverser(active=352, passive=432, card=73, start_seed=start, end_seed=end, ref_queue=queue,
-                                   seeds=found_seeds).reverse
-            thread[i] = Thread(target=instance[i])
-            thread[i].start()
-            print('Started thread ' + str(i) + ': Start - ' + str(start) + ' End - ' + str(end))
+    # tasks = []
+    # seeds = []
+    # chunk = 100
+    # completed = 0
+    # start_time = datetime.now()
+    # print_progress_bar(completed, chunk)
+    # with ThreadPoolExecutor(max_workers=num_worker_threads) as executor:
+    #     for i in range(chunk):
+    #         start = i * -(-0xFFFFFFFF//chunk) + 1
+    #         end = (i+1) * -(-0xFFFFFFFF//chunk)
+    #         tasks.append(executor.submit(jit_reverser, active=580, passive=116, trinket=3, start_seed=start, end_seed=end))
+    #     for task in as_completed(tasks):
+    #         completed += 1
+    #         seeds = seeds + task.result()
+    #         print_progress_bar(completed, chunk)
+    #     end_time = datetime.now()
+    #     print('Completed in: ' + str(end_time - start_time))
+    #     print('Found ' + str(len(seeds)) + ' seeds.')
+    #     for seed in seeds:
+    #         game = Game(seed, 0)
+    #         game.print_seed()
 
-        for t in thread:
-            t.join()
-
-        gen_rev = Reverser(active=352, passive=432, card=73)
-        for seed in found_seeds:
-            gen_rev.print_stats(seed)
-
-    # reverser = Reverser(active=352, passive=432, card=73, start_seed=0x0)
-    # reverser.reverse()
-
-    # game = Game(93001831, 2)
-    # game.print_seed()
-    # game.eden.print_stats()
-
-# # print('Stage Generation')
-# # for stage in stages_seeds:
-# #     stage.next() # This one set the stage type
-# #     stage.next()
-# #     # Missing a lot of these will come back later
-# #     # stage.print_seed()
-#
-#
-# verbose = 0
-# print('Pill RNG Loop?')
-# for var in range(0, 31):
-#     pickup_seeds.next()
-#     pickup_seeds.next()
-# pickup_seeds.genrand(0x270)
-# for var in range(0, 12):
-#     pickup_seeds.next()
-#
-#
-# print('New some RNG from start seed')
-# unknown_seeds_2 = RNG(0x459, [0x3, 0xD, 0x7])
-# unknown_seeds_2.next()
-# unknown_seeds_2_array = []
-# for var in range(0, 0x25): #Pool Seeds?
-#     # Pool 0 = Treasure
-#     unknown_seeds_2_array.append(RNG(unknown_seeds_2.next(), [0x3, 0xD, 0x7]))
-#     unknown_seeds_2_array[var].genrand(0x270)
+    # for i in range(1000, 2000):
+    #     game = Game(i, 0)
+    #     if game.eden.pill is not None:
+    #         game.print_seed()
+    #         game.eden.print_stats()
+    #         exit()

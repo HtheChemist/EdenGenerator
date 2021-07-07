@@ -109,8 +109,7 @@ class RNG:
             if verbose_str:
                 print(verbose_str)
 
-    def revese_random(self, maximum: int = 1):
-        random_number: Union[int, float] = 0
+    def reverse_random(self, maximum: int = 1):
         if maximum == 1:
             random_number = self.previous() * 2.3283062e-10
         else:
@@ -118,7 +117,7 @@ class RNG:
 
         verbose_str: str = ""
         if self.verbose > 1:
-            verbose_str += "Generated previous random number: " + str(random_number)
+            verbose_str += "Generated random number: " + str(random_number)
         if self.verbose > 2:
             verbose_str += " (Max: " + str(maximum) + ")"
         if verbose_str:
@@ -126,9 +125,8 @@ class RNG:
 
         return random_number
 
-    def random(self, maximum: int = 1):
-        random_number: Union[int, float] = 0
-        if maximum == 1:
+    def random(self, maximum: int = None):
+        if maximum is None:
             random_number = self.next() * 2.3283062e-10
         else:
             random_number = self.next() % maximum

@@ -8,6 +8,9 @@ class ItemType(Enum):
     Forbidden = -1
 
 
+pill_colors_number = 0xD
+pill_effects_number = 0x32
+
 isaac_items = {
     1: ItemType.Passive,
     2: ItemType.Passive,
