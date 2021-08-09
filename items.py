@@ -2,6 +2,8 @@ from typing import List, Type
 
 from rng import RNG
 
+# Unsure what this does, it is in the decompiled code in some way. I would guess that it is used to generate which item
+# is spawned in each rooms/drop
 
 class Item:
     uid: int

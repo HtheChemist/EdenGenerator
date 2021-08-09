@@ -71,6 +71,8 @@ def jit_reverser(
     end_seed: int = 0xFFFFFFFF,
 ):
 
+    # Numba jit implementaiton of the reverser function to speed things up.
+
     collectibles_number = 0x2DA
     trinket_number = 0xBE
     card_number = 0x16
@@ -114,6 +116,7 @@ def jit_reverser(
     while current_seed < end_seed:
         # print('Trying seed: ' + str(hex(self.start_seed)))
         item_id = current_seed % collectibles_number + 1
+
         if item_id == min_item or item_id == max_item:
             if isaac_items[item_id] == 1:
                 first_item_type = 1

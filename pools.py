@@ -1,6 +1,6 @@
 from enum import Enum
 
-
+# Items pools and number of items in each pools if needed
 class ItemType(Enum):
     Active = 1
     Passive = 2

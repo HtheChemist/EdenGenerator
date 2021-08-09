@@ -10,14 +10,15 @@ from pools import ItemType, isaac_items, items_blacklist
 from queue import Queue
 from jitfunctions import jit_reverser
 
-verbose_level = 0
-num_worker_threads = 10
+verbose_level = 0 # For debugging purpose
+num_worker_threads = 10 # Number of CPU
 found_seeds = []
 thread = [None] * num_worker_threads
 instance = [None] * num_worker_threads
 
 
 def bruteforce(start: int = 0):
+    # Not really used mainly for debugging purpose
     # I am at 1561700
     for seed in range(start, 0xFFFFFFFF + 1):
         if not seed % 100:
@@ -42,6 +43,8 @@ def bruteforce(start: int = 0):
 
 
 class Reverser:
+    # This is a non JIT version for development, it is a lot slower than the jit version but it is a bit easier to
+    # read and debug
 
     def __init__(self, active: int = None, passive: int = None, card: int = None, trinket: int = None,
                  pill_effect: int = None, start_seed: int = 0, end_seed: int = 0xFFFFFFFF, seeds: List = None,
@@ -118,10 +121,16 @@ class Reverser:
 
 
     def reverse(self):
+        # This is the main reversing algorithm
         print(self.start_seed)
         while self.start_seed < min(0xFFFFFFFF, self.end_seed):
+            # It will loop until it reaches the end of its list.
             # print('Trying seed: ' + str(hex(self.start_seed)))
+            # Get an item ID from the random number
+            # TODO: Skip this if there are not items requested
             item_id = self.start_seed % self.collectibles_number + 1
+            # There are not logic to passive/active item numbering so it need to be compared to a set list of values
+            # A big of logic is needed to check if it is a passive or active
             if item_id == self.min_item or item_id == self.max_item:
                 if self.check_item_type(item_id) == ItemType.Active:
                     first_item_type = self.check_item_type(item_id)
@@ -131,14 +140,28 @@ class Reverser:
                     self.passive_found = True
 
                 # print('First item found: ' + str(item_id) + ' (' + str(first_item_type) + ')')
-                self.potential_dropseed = DropSeeds(self.start_seed,4)
+                # Init an object with the dropseed properties, mainly the xorshift steps.
+                self.potential_dropseed = DropSeeds(self.start_seed, 4)
+
+                # The items generation algorithm in the game will do up to 100 try, so we will have the same thing in
+                # reverse
                 for i in range(0, 99):
+
+                    # Generate a new item id
                     item_id = self.potential_dropseed.reverse_random(self.collectibles_number) + 1
+
+                    # Check if the item id is in the black list, this blacklist is mostly tainted character specific
+                    # items or items linked to quest
                     if item_id not in items_blacklist:
+                        # Check if it is the same type as the first one. Since we are working in reverse, the new item
+                        # will be the one that the game algorithm would have taken, hence invalidating the other item
+                        # we will therefore break the loop and go to the next try. Else, we continue the loop.
                         if self.check_item_type(item_id) == first_item_type:
                             # print('Another ' + str(first_item_type) + ' was found before the second one. Break.')
                             break
                         else:
+                            # We need to check if the new id is one of interest, if yes, we break our loop, if not we
+                            # continue to our next try
                             if item_id == self.min_item or item_id == self.max_item:
                                 # print('Second item found: ' + str(item_id))
                                 if self.check_item_type(item_id) == ItemType.Active:
@@ -147,8 +170,15 @@ class Reverser:
                                     self.passive_found = True
                                 break
 
+                # Once we find both item we do the check for the card/trinket/pills
+                # TODO:  If no item are specified, the loop should start about here.
                 if self.passive_found and self.active_found:
 
+                    # This is used to check what kind of item will be generated.
+                    # See here for more explaination: https://bindingofisaacrebirth.fandom.com/wiki/Eden_Generation#Pocket_Items
+                    # We reverse generate the 5 potential check (potential maximum), then work from there.
+                    # If we find a seed that will gives us the right items, we reverse the seed generation up to the
+                    # initial one and add it to the array of found seeds
                     check_point_1 = self.potential_dropseed.previous()
                     check_point_2 = self.potential_dropseed.previous()
                     check_point_3 = self.potential_dropseed.previous()
@@ -216,9 +246,13 @@ class Reverser:
                             # print('This try will yield a pill, card or trinket. Next')
                             pass
 
+            # We reset the loop and go to the next one
             self.passive_found = False
             self.active_found = False
             self.potential_dropseed = None
+
+            # This part calculated what the next step should be to ensure that the next number will end up with a number
+            # that will yield a desired items, this significatively cut down the number of try needed.
             self.start_seed += self.calculate_next_step()
 
         if self.queue is None:
@@ -228,6 +262,8 @@ class Reverser:
                 self.print_stats(seed)
 
     def calculate_next_step(self):
+        # This basically ensure that the next modulo will give us an item match
+        # TODO: If no item are requeted, step through pocket item number instead
         modulo = self.start_seed % self.collectibles_number
         if modulo + 1 < self.min_item:
             return self.min_item - modulo - 1
@@ -237,6 +273,8 @@ class Reverser:
             return self.collectibles_number - modulo + self.min_item - 1
 
     def goto_start_seed(self, seed):
+        # This will start at the found seed and reverse the Xoshifts up to the initial seed required to get there.
+        # See the Game object for more information
         items_seeds = ItemsSeeds(seed)
         items_seeds.previous()
         items_seeds.previous()
@@ -249,6 +287,9 @@ class Reverser:
         return game_seeds.previous()
 
     def get_trinket(self):
+        # This will generate which trinket will be given for a potential item seed. We need to go back then up since
+        # the trinket seed used is generated earlier in the process
+        # TODO: Start here for trinket only generation
         self.potential_trinketseed = ItemsSeeds(self.potential_trinketseed.previous())
         self.potential_trinketseed.previous()
         self.potential_trinketseed.previous()
@@ -267,11 +308,14 @@ class Reverser:
             return False
 
     def get_card(self):
+        # Similar to trinket, but we don't need to go as far up
+        # The first check is for normal vs special card (runes are ignored)
         if self.potential_holdseed.random(0x19):
             tmp_card = self.potential_holdseed.random(0x16) + 1
             if not self.potential_holdseed.random(7):
                 tmp_card += 55
         else:
+            # Special card, not implemented
             tmp_card = -1
             pass
         if self.card == tmp_card or self.card == -1:
@@ -280,6 +324,7 @@ class Reverser:
             return False
 
     def get_pill(self):
+        # Not implemented so will always return true
         return True
 
     def print_stats(self, seed):
@@ -314,31 +359,42 @@ def print_progress_bar (iteration, total, prefix = '', suffix = '', decimals = 1
     if iteration == total:
         print()
 
+
 if __name__ == "__main__":
-    game = Game(1000,3)
 
-    # tasks = []
-    # seeds = []
-    # chunk = 100
-    # completed = 0
-    # start_time = datetime.now()
-    # print_progress_bar(completed, chunk)
-    # with ThreadPoolExecutor(max_workers=num_worker_threads) as executor:
-    #     for i in range(chunk):
-    #         start = i * -(-0xFFFFFFFF//chunk) + 1
-    #         end = (i+1) * -(-0xFFFFFFFF//chunk)
-    #         tasks.append(executor.submit(jit_reverser, active=580, passive=116, trinket=3, start_seed=start, end_seed=end))
-    #     for task in as_completed(tasks):
-    #         completed += 1
-    #         seeds = seeds + task.result()
-    #         print_progress_bar(completed, chunk)
-    #     end_time = datetime.now()
-    #     print('Completed in: ' + str(end_time - start_time))
-    #     print('Found ' + str(len(seeds)) + ' seeds.')
-    #     for seed in seeds:
-    #         game = Game(seed, 0)
-    #         game.print_seed()
+    # Uncomment this part to find out what will be Eden stats from a seed number. Note, I do not have implemented the
+    # seed code to seed number function, so you need to use an unsigned integer.
+    # game = Game(1000,0)
 
+    # This is the main function to find seeds from items value. The main function is jit_reverser, the code before and
+    # after is used to split in chunk the script so it can be parallelized.
+    # jit_reverse is simply an implementation of the reverse function but with Numba allowed function so it can be
+    # compiled and therefore *significatively* sped up.
+    ###############
+    tasks = []
+    seeds = []
+    chunk = 100
+    completed = 0
+    start_time = datetime.now()
+    print_progress_bar(completed, chunk)
+    with ThreadPoolExecutor(max_workers=num_worker_threads) as executor:
+        for i in range(chunk):
+            start = i * -(-0xFFFFFFFF//chunk) + 1
+            end = (i+1) * -(-0xFFFFFFFF//chunk)
+            tasks.append(executor.submit(jit_reverser, active= 352, passive=116, trinket=13, start_seed=start, end_seed=end))
+        for task in as_completed(tasks):
+            completed += 1
+            seeds = seeds + task.result()
+            print_progress_bar(completed, chunk)
+        end_time = datetime.now()
+        print('Completed in: ' + str(end_time - start_time))
+        print('Found ' + str(len(seeds)) + ' seeds.')
+        for seed in seeds:
+            game = Game(seed, 0)
+            game.print_seed()
+    #########
+
+    # For debug purpose and trying to find seed with a pill
     # for i in range(1000, 2000):
     #     game = Game(i, 0)
     #     if game.eden.pill is not None:

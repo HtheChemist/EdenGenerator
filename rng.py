@@ -4,6 +4,8 @@ import numpy as np
 
 
 class RNG:
+    # RNG class, so it allows us to get the next or previous number according to their xorshift table.
+    # Each RNG object has a different shifts list, and therefore a different xorshift table
     shift: List[int] = [0,0,0]
     seed: int
     old_seed: int

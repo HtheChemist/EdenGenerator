@@ -1,5 +1,7 @@
 from rng import RNG
 
+# Unused at the moment
+
 # enum ePillEffect:
 # 	PILLEFFECT_NULL = - 1,
 # 	PILLEFFECT_BAD_GAS = 0,

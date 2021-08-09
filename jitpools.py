@@ -8,7 +8,7 @@ class ItemType(Enum):
     Familiar = 3
     Forbidden = -1
 
-
+# Items pools used by the jit function, turned into primitive instead of python dict
 isaac_items = np.array(
     [
         -1,

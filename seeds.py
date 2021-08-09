@@ -1,7 +1,9 @@
 import numpy as np
+import numba
 
-
+@numba.jit
 def seed2string(seedval: int):
+    # Convert a seed value to its string value
     aAbcdefghjklmnp = "ABCDEFGHJKLMNPQRSTWXYZ01234V6789"
     seed_checksum = 0
     tmp_seedval = 0

@@ -17,6 +17,9 @@ from stage import World
 
 
 class Game:
+    # This class hold a "Game" value, basically the Eden information found using a set seed. The verbose options gives
+    # more information regarding what each RNG is used for.
+
     def __init__(self, seed, verbose):
         self.seed = seed
         self.verbose = verbose
@@ -140,23 +143,25 @@ class Game:
 
         pills_colors = np.arange(0, pill_colors_number, dtype=int)
         pills_effects = np.arange(0, pill_effects_number, dtype=int)
+
+        # Pills effects and Pills color order seems to be right
         pills_colors = self.shuffle_array(pills_colors, self.pickup_rng_1)
         pills_effects = self.shuffle_array(pills_effects, self.pickup_rng_1)
         # I think the original code does not remove the 0 since there is a check if the selected index is 0
         pills_effects = pills_effects[pills_effects > 0]
-        print(pills_colors+1)
-        print(pills_effects)
+        # print(pills_colors+1)
+        # print(pills_effects)
 
-        for i in pills_colors:
-            rnd = self.pickup_rng_1.random(pills_effects.size+1)
-            self.pills_array[pills_colors[i]] = pills_effects[rnd]
-            pills_effects = np.delete(pills_effects, rnd)
+        # This is broken
+        # for i in pills_colors:
+        #     rnd = self.pickup_rng_1.random(pills_effects.size+1)
+        #     self.pills_array[pills_colors[i]] = pills_effects[rnd]
+        #     pills_effects = np.delete(pills_effects, rnd)
 
-        if self.verbose > 1:
-            for index in range(self.pills_array.size):
-                print('Color: ' + str(index) + ' - Effect: ' + str(self.pills_array[index]) )
+        # if self.verbose > 1:
+        #     for index in range(self.pills_array.size):
+        #         print('Color: ' + str(index) + ' - Effect: ' + str(self.pills_array[index]) )
 
-        exit()
 
 
 
@@ -164,6 +169,7 @@ class Game:
 
     @staticmethod
     def shuffle_array(array: np.ndarray, random: RNG):
+        # This is the array shuffle algorithm used to mix the array for pills generation
         size = array.size
         while size > 1:
             size -= 1

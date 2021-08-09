@@ -3,6 +3,9 @@ from rng import StatsSeeds, DropSeeds, CardsDrop, PillsDrop
 
 
 class Eden:
+    # This class is used to generate Eden values
+    # Check https://bindingofisaacrebirth.fandom.com/wiki/Eden_Generation for a bit more information, the process is
+    # roughly the same but there are more xorshift before the eden_seed so the old implementation does not work anymore
     def __init__(self, eden_seed, pickup_rng, pills_array, verbose):
         self.verbose = verbose
         self.pills_array = pills_array
